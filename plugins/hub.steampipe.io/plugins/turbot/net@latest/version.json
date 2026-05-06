@@ -1,0 +1,11 @@
+{
+  "name": "hub.steampipe.io/plugins/turbot/net@latest",
+  "version": "1.1.0",
+  "image_digest": "sha256:cfa99ceda481fe0f2b59dfc5a44e90425bfc6dd4be5b58c58bb978f594b43147",
+  "binary_digest": "sha256:fa5b44d22d4d0f8177adedcfe4784648089214a5c6fce8038f202248f92624cc",
+  "binary_arch": "arm64",
+  "installed_from": "ghcr.io/turbot/steampipe/plugins/turbot/net:1.1.0",
+  "last_checked_date": "2026-04-30T09:38:26Z",
+  "install_date": "2026-04-30T09:38:26Z",
+  "struct_version": 20250303
+}
