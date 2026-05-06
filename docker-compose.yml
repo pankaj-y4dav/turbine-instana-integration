@@ -1,0 +1,17 @@
+services:
+  steampipe:
+    build:
+      context: .
+      args:
+        PLUGINS: net
+    container_name: steampipe
+    volumes: 
+      - ./queries:/home/steampipe/queries
+    environment:
+      - STEAMPIPE_LOG_LEVEL=TRACE
+    command: steampipe service start --foreground
+    env_file:
+      - .env
+    ports:
+      - 9193:9193
+    restart: unless-stopped
