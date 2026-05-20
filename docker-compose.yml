@@ -1,10 +1,10 @@
 services:
   steampipe:
     build:
-      # Parent dir is the context so both steampipe-plugin-instana/ (source)
-      # and steampipe-instana/ (config, version.json) are accessible.
-      context: ..
-      dockerfile: steampipe-instana/Dockerfile
+      context: .
+      dockerfile: Dockerfile
+      additional_contexts:
+        plugin-src: ../steampipe-plugin-instana
     container_name: steampipe
     volumes:
       - ./queries:/home/steampipe/queries

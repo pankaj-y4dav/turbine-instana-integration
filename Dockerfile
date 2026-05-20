@@ -1,8 +1,8 @@
 # ─── Stage 1: Build the Instana Steampipe plugin ────────────────────────────
-# Build context must be set via: docker-compose build context: ..
+# plugin-src additional_context points to ../steampipe-plugin-instana (see docker-compose.yml)
 FROM golang:1.24-alpine AS builder
 WORKDIR /build
-COPY steampipe-plugin-instana/ ./
+COPY --from=plugin-src . .
 RUN CGO_ENABLED=0 GOOS=linux go build -tags netgo -o steampipe-plugin-instana.plugin .
 
 # ─── Stage 2: Steampipe runtime ──────────────────────────────────────────────
@@ -21,11 +21,11 @@ COPY --from=builder --chown=steampipe:steampipe \
 
 # Version manifest — tells Steampipe the plugin is locally managed
 COPY --chown=steampipe:steampipe \
-    steampipe-instana/plugins/instana/version.json \
+    plugins/instana/version.json \
     /home/steampipe/.steampipe/plugins/hub.steampipe.io/plugins/hashicorp/instana@latest/version.json
 
 # Connection config — plugin reads INSTANA_API_TOKEN / INSTANA_ENDPOINT_URL from env
-COPY --chown=steampipe:steampipe \
-    steampipe-plugin-instana/config/instana.spc \
+COPY --from=plugin-src --chown=steampipe:steampipe \
+    config/instana.spc \
     /home/steampipe/.steampipe/config/instana.spc
 
