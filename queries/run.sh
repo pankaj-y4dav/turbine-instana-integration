@@ -35,6 +35,5 @@ awk -v dir="$TMPDIR" '
 ' "$TMPDIR/expanded.sql"
 
 for f in "$TMPDIR"/stmt_*.sql; do
-    cat "$f"
     steampipe query "$f"
 done

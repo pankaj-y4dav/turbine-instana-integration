@@ -1,0 +1,6 @@
+{
+  "name": "hub.steampipe.io/plugins/hashicorp/instana@latest",
+  "version": "0.0.1",
+  "binary_arch": "amd64",
+  "struct_version": 20250303
+}
