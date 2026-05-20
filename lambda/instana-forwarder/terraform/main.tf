@@ -57,7 +57,7 @@ resource "aws_lambda_function" "processor" {
 
   environment {
     variables = {
-      INSTANA_BASE_URL = var.instana_base_url
+      INSTANA_OTLP_URL = var.instana_otlp_url
       INSTANA_API_KEY  = var.instana_api_key
       LOG_SERVICE_NAME = var.log_service_name
     }

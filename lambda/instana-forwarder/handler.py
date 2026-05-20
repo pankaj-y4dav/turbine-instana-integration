@@ -9,60 +9,106 @@ import urllib.error
 logger = logging.getLogger()
 logger.setLevel(logging.INFO)
 
+# OTLP severity mapping
+SEVERITY_MAP = {
+    "ERROR": (17, "ERROR"),
+    "WARN":  (13, "WARN"),
+    "INFO":  (9,  "INFO"),
+    "DEBUG": (5,  "DEBUG"),
+    "TRACE": (1,  "TRACE"),
+}
+
 
 def lambda_handler(event, context):
-    api_key = os.environ["INSTANA_API_KEY"]
-    base_url = os.environ["INSTANA_BASE_URL"].rstrip("/")
-    service = os.environ.get("LOG_SERVICE_NAME", "cloudwatch")
+    api_key  = os.environ["INSTANA_API_KEY"]
+    otlp_url = os.environ["INSTANA_OTLP_URL"].rstrip("/")
+    service  = os.environ.get("LOG_SERVICE_NAME", "cloudwatch")
 
-    all_entries = []
+    all_log_records = []
     records_out = []
 
     for record in event["records"]:
         try:
-            entries = extract_log_entries(record["data"], service)
-            all_entries.extend(entries)
-            records_out.append({"recordId": record["recordId"], "result": "Ok", "data": record["data"]})
+            log_records = extract_log_records(record["data"])
+            all_log_records.extend(log_records)
+            records_out.append({
+                "recordId": record["recordId"],
+                "result": "Ok",
+                "data": record["data"],
+            })
         except Exception as e:
             logger.error("Failed to process record %s: %s", record["recordId"], e)
-            records_out.append({"recordId": record["recordId"], "result": "ProcessingFailed", "data": record["data"]})
+            records_out.append({
+                "recordId": record["recordId"],
+                "result": "ProcessingFailed",
+                "data": record["data"],
+            })
 
-    if all_entries:
-        send_to_instana(base_url, api_key, all_entries)
-        logger.info("Forwarded %d log entries to Instana in one batch", len(all_entries))
+    if all_log_records:
+        otlp_payload = build_otlp_payload(all_log_records, service)
+        send_otlp(otlp_url, api_key, otlp_payload)
+        logger.info("Forwarded %d log records to Instana via OTLP", len(all_log_records))
 
     return {"records": records_out}
 
 
-def extract_log_entries(data: str, service: str) -> list:
+def extract_log_records(data: str) -> list:
     decoded = base64.b64decode(data)
     raw = gzip.decompress(decoded)
     cwl = json.loads(raw)
+    return cwl.get("logEvents", [])
 
-    entries = []
-    for event in cwl.get("logEvents", []):
-        entries.append({
-            "timestamp": event["timestamp"],
-            "message": event["message"],
-            "level": "INFO",
-            "service": service,
+
+def build_otlp_payload(log_events: list, service: str) -> dict:
+    log_records = []
+    for event in log_events:
+        message = event.get("message", "")
+        severity_text, severity_number = detect_severity(message)
+        log_records.append({
+            # OTLP timestamps are in nanoseconds
+            "timeUnixNano": str(event["timestamp"] * 1_000_000),
+            "severityNumber": severity_number,
+            "severityText": severity_text,
+            "body": {"stringValue": message},
         })
-    return entries
+
+    return {
+        "resourceLogs": [{
+            "resource": {
+                "attributes": [
+                    {"key": "service.name", "value": {"stringValue": service}},
+                    {"key": "telemetry.sdk.name", "value": {"stringValue": "cloudwatch-firehose"}},
+                ]
+            },
+            "scopeLogs": [{
+                "scope": {"name": "cloudwatch-forwarder"},
+                "logRecords": log_records,
+            }]
+        }]
+    }
 
 
-def send_to_instana(base_url: str, api_key: str, entries: list) -> None:
-    body = json.dumps(entries).encode("utf-8")
+def detect_severity(message: str) -> tuple:
+    upper = message.upper()
+    for keyword, (number, text) in SEVERITY_MAP.items():
+        if keyword in upper:
+            return text, number
+    return "INFO", 9
+
+
+def send_otlp(otlp_url: str, api_key: str, payload: dict) -> None:
+    body = json.dumps(payload).encode("utf-8")
     req = urllib.request.Request(
-        url=f"{base_url}/api/logs",
+        url=f"{otlp_url}",
         data=body,
         headers={
-            "Authorization": f"apiToken {api_key}",
+            "x-instana-key": api_key,
             "Content-Type": "application/json",
         },
         method="POST",
     )
     try:
         with urllib.request.urlopen(req, timeout=15) as resp:
-            logger.info("Instana response: %s", resp.status)
+            logger.info("Instana OTLP response: %s", resp.status)
     except urllib.error.HTTPError as e:
-        raise RuntimeError(f"Instana returned {e.code}: {e.read().decode()}") from e
+        raise RuntimeError(f"Instana OTLP returned {e.code}: {e.read().decode()}") from e

@@ -1,5 +1,5 @@
-variable "instana_base_url" {
-  description = "Instana base URL e.g. https://test-hcp.instana.io"
+variable "instana_otlp_url" {
+  description = "Instana OTLP logs endpoint e.g. https://otlp-red-saas.instana.io/v1/logs"
   type        = string
 }
 
