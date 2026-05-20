@@ -82,7 +82,7 @@ order by
 select
   snapshot_id,
   host_name,
-  entity_id,
+  host,
   created_at,
   last_change
 from
@@ -98,12 +98,13 @@ select
   id,
   name,
   sli_type,
-  target_percentage,
-  entity_type
+  metric_threshold,
+  metric_name,
+  metric_aggregation
 from
   instana_sli
 order by
-  target_percentage desc;
+  metric_threshold desc;
 
 
 -- ---------------------------------------------------------------------------
@@ -119,7 +120,7 @@ select
 from
   instana_event
 where
-  state = 'OPEN'
+  state = 'open'
 order by
   severity desc,
   start desc;
@@ -130,27 +131,28 @@ order by
 -- ---------------------------------------------------------------------------
 select
   id,
-  name,
-  full_name
+  tag,
+  info ->> 'description' as description
 from
   instana_team
 order by
-  name;
+  tag;
 
 
 -- ---------------------------------------------------------------------------
--- 9. Users and their roles
+-- 9. Users and their login info
 -- ---------------------------------------------------------------------------
 select
   id,
   email,
-  first_name,
-  last_name,
-  role
+  full_name,
+  group_count,
+  last_logged_in,
+  tfa_enabled
 from
   instana_user
 order by
-  role, email;
+  email;
 
 
 -- ---------------------------------------------------------------------------
@@ -160,8 +162,7 @@ select
   id,
   name,
   app_name,
-  active,
-  monitoring_type
+  tags
 from
   instana_website_monitoring
 order by
