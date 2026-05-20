@@ -5,7 +5,7 @@ with raw as (
         net_http_request
     where
         url = 'https://test-hcp.instana.io/api/application-monitoring/services'
-        and request_headers = '{"authorization": "apiToken ${INSTANA_API_KEY}"}'::jsonb
+        and request_headers = '{"authorization": "apiToken your_api_token_here"}'::jsonb
 ),
 
 services as (

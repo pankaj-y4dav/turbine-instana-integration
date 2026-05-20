@@ -1,15 +1,18 @@
 services:
   steampipe:
     build:
-      context: .
-      args:
-        PLUGINS: net
+      # Parent dir is the context so both steampipe-plugin-instana/ (source)
+      # and steampipe-instana/ (config, version.json) are accessible.
+      context: ..
+      dockerfile: steampipe-instana/Dockerfile
     container_name: steampipe
-    volumes: 
+    volumes:
       - ./queries:/home/steampipe/queries
     environment:
       - STEAMPIPE_LOG_LEVEL=TRACE
-    command: steampipe service start --foreground
+      - INSTANA_API_TOKEN
+      - INSTANA_ENDPOINT_URL
+    command: bash -c "rm -f /home/steampipe/.steampipe/internal/*.pid /home/steampipe/.steampipe/internal/*.lock 2>/dev/null; steampipe service start --foreground"
     env_file:
       - .env
     ports:
